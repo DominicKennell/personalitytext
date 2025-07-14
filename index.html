@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Career Guidance with Naive Bayes</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 2em; }
+  textarea { width: 100%; height: 100px; font-size: 1em; }
+  #output { white-space: pre-wrap; margin-top: 1em; background: #f0f0f0; padding: 1em; }
+  button { font-size: 1.2em; margin-top: 1em; padding: 0.5em 1em; }
+</style>
+</head>
+<body>
+
+<h2>Describe your personality, interests, or dream job:</h2>
+<textarea id="inputText"></textarea>
+<br />
+<button onclick="analyze()">Analyze and Suggest Careers</button>
+
+<div id="output"></div>
+
+<script>
+// === Data ===
+const trainingSentences = [
+  // Openness (13)
+  "I love exploring new ideas and artistic creativity.",
+  "Reading books about philosophy and abstract concepts excites me.",
+  "I enjoy imagining innovative solutions to problems.",
+  "Traveling and experiencing different cultures fascinates me.",
+  "I often daydream about fantasy worlds and stories.",
+  "I like trying experimental art and design.",
+  "I am curious and open to novel experiences.",
+  "I enjoy music, poetry, and literature.",
+  "My mind is always full of creative thoughts.",
+  "I appreciate aesthetics and unique perspectives.",
+  "I want to be a film editor",
+  "I want to be a movie editor",
+  "I want to be a vlogger",
+
+  // Conscientiousness (10)
+  "I am very organized and always make detailed plans.",
+  "I complete my tasks on time and with great care.",
+  "I like to keep my schedule structured and follow routines.",
+  "Being responsible and reliable is very important to me.",
+  "I work hard and focus on achieving my goals.",
+  "I am disciplined and pay attention to details.",
+  "I prefer a clean and methodical work environment.",
+  "I set deadlines and make sure I meet them.",
+  "I keep track of my habits to improve productivity.",
+  "Planning ahead and following through is how I operate.",
+
+  // Extraversion (10)
+  "I enjoy socializing and meeting new people.",
+  "I am talkative and energetic in groups.",
+  "Being the center of attention excites me.",
+  "I love participating in parties and events.",
+  "I am outgoing and enthusiastic in my activities.",
+  "I like working in teams and engaging with others.",
+  "People say I am cheerful and friendly.",
+  "I feel energized by being around others.",
+  "I enjoy public speaking and leading groups.",
+  "I am spontaneous and love dynamic environments.",
+
+  // Agreeableness (10)
+  "I am kind and always willing to help others.",
+  "I care deeply about people’s feelings and wellbeing.",
+  "Being cooperative and supportive is natural to me.",
+  "I am patient and forgiving in difficult situations.",
+  "I enjoy volunteering and contributing to the community.",
+  "People say I am empathetic and nurturing.",
+  "I listen carefully and try to understand others.",
+  "I prefer peaceful and harmonious environments.",
+  "I am loyal and trustworthy to my friends.",
+  "I like working as part of a team to help others.",
+
+  // Neuroticism (10)
+  "I often feel anxious and worry about the future.",
+  "I can get moody and sensitive easily.",
+  "Stressful situations make me feel nervous and tense.",
+  "I sometimes struggle with self-doubt and insecurity.",
+  "I tend to overthink problems and feel overwhelmed.",
+  "I am shy and avoid confrontation.",
+  "I get irritated or upset more than others.",
+  "I feel vulnerable and emotionally fragile at times.",
+  "I find it hard to handle pressure without stress.",
+  "I sometimes withdraw when I feel distressed."
+];
+
+const trainingLabels = [
+  ...Array(13).fill("Openness"),
+  ...Array(10).fill("Conscientiousness"),
+  ...Array(10).fill("Extraversion"),
+  ...Array(10).fill("Agreeableness"),
+  ...Array(10).fill("Neuroticism")
+];
+
+// Synonyms map (simple)
+const SYNONYMS = {
+  "teach": "teacher",
+  "educate": "teacher",
+  "writer": "journalist",
+  "report": "journalist",
+  "cop": "police",
+  "officer": "police",
+  "beauty": "hair & beauty",
+  "hairdresser": "hair & beauty",
+  "developer": "software developer",
+  "programmer": "software developer",
+  // Add more as needed
+};
+
+// Career suggestions by trait
+const CAREER_SUGGESTIONS = {
+  Openness: ["Artist", "Writer", "Graphic Designer", "Musician", "Architect", "Creative Director", "Philosopher", "Research Scientist", "Travel Blogger", "Film Critic", "Editor", "Software Developer", "Data Scientist", "UI/UX Designer", "Game Developer", "Actor", "Director", "Animator", "Composer", "College Professor", "Curriculum Developer"],
+  Conscientiousness: ["Accountant", "Engineer", "Project Manager", "Surgeon", "Data Analyst", "Auditor", "Pharmacist", "Quality Control Inspector", "IT Manager", "Civil Engineer", "Financial Analyst", "Tax Consultant", "Risk Manager", "Financial Planner", "Production Manager", "Industrial Engineer", "Logistics Coordinator", "Healthcare Administrator", "Medical Assistant"],
+  Extraversion: ["Salesperson", "Teacher", "Public Relations Manager", "Flight Attendant", "Event Planner", "Marketing Executive", "Customer Service Rep", "Radio DJ", "Sports Coach", "Recruiter", "Restaurant Manager", "Hotel Manager", "Bartender", "Concierge", "School Counselor", "Kindergarten Teacher", "TV Presenter", "Radio Host", "Talent Agent"],
+  Agreeableness: ["Nurse", "Social Worker", "Counselor", "Therapist", "Human Resources Specialist", "Volunteer Coordinator", "Kindergarten Teacher", "Veterinarian", "School Counselor", "Life Coach", "Physical Therapist", "Speech-Language Pathologist", "Dietitian", "Special Education Teacher", "Education Coordinator", "Community Service Manager", "Nonprofit Program Manager"],
+  Neuroticism: ["Artist", "Researcher", "Poet", "Academic Researcher", "Librarian", "Translator", "Data Entry Clerk", "Medical Coder", "Lab Technician", "Archivist", "Technical Writer", "Library Technician", "Medical Laboratory Scientist", "Clinical Research Coordinator"]
+};
+
+// Field keywords for detection
+const FIELD_KEYWORDS = {
+  "ICT": ["ict", "information technology", "software", "programming", "coding", "computer", "technology", "it"],
+  "Healthcare": ["health", "nurse", "doctor", "medical", "therapy", "clinic", "pharmacy", "patient"],
+  "Education": ["teach", "teacher", "education", "school", "learning", "student", "classroom", "tutor"],
+  "Hospitality": ["cooking", "chef", "restaurant", "hotel", "hospitality", "food", "catering", "waiter", "bartender"],
+  "Agriculture": ["farming", "soil", "crop", "livestock", "agriculture", "farm", "horticulture"],
+  "Finance": ["banking", "investment", "audit", "finance", "accounting", "tax", "budget", "loan"],
+  "Manufacturing": ["factory", "assembly", "logistics", "manufacturing", "production", "machinery", "warehouse"],
+  "Construction": ["construction", "builder", "site", "contractor", "carpenter", "plumber", "electrician", "mason", "bricklayer"],
+  "Entertainment": ["actor", "film", "music", "theater", "entertainment", "concert", "show", "dance", "cinema", "film editing", "movie editing"],
+  "Sports": ["sport", "athlete", "coach", "fitness", "training", "exercise", "gym", "physical education"],
+  "Journalism": ["journalist", "reporter", "news", "media", "broadcast", "editorial", "press", "correspondent", "writing", "writer", "article", "report", "journalism"],
+  "Hair & Beauty": ["hair", "salon", "beauty", "makeup", "hairstylist", "cosmetology", "esthetician", "barber"],
+  "Police": ["police", "law enforcement", "officer", "cop", "detective", "investigator", "crime"],
+  "Civil Servants": ["civil servant", "government", "public service", "bureaucrat", "administration", "clerk"]
+};
+
+// Field jobs
+const FIELD_JOBS = {
+  "ICT": ["Software Developer", "IT Manager", "Data Analyst", "Web Developer", "Cybersecurity Specialist", "UI/UX Designer", "Game Developer"],
+  "Healthcare": ["Nurse", "Doctor", "Medical Coder", "Therapist", "Lab Technician", "Pharmacist"],
+  "Education": ["Teacher", "Tutor", "School Counselor", "Curriculum Developer", "College Professor", "Librarian"],
+  "Entertainment": ["Actor", "Musician", "Director", "Video Editor", "Animator", "Producer", "Screenwriter"],
+  "Finance": ["Financial Analyst", "Accountant", "Tax Consultant", "Risk Manager", "Investment Banker"],
+  "Hospitality": ["Chef", "Waiter", "Hotel Manager", "Bartender", "Front Desk Officer", "Catering Manager"],
+  "Manufacturing": ["Production Worker", "Quality Control Inspector", "Factory Supervisor", "Logistics Technician", "Assembly Line Worker", "Machinist"],
+  "Construction": ["Construction Worker", "Site Supervisor", "Civil Engineer", "Architect", "Plumber", "Electrician", "Carpenter", "Mason"],
+  "Hair & Beauty": ["Hairdresser", "Makeup Artist", "Beautician", "Barber", "Skincare Specialist", "Salon Manager"],
+  "Police": ["Police Officer", "Detective", "Forensic Investigator", "Traffic Officer", "SWAT", "Community Policing Officer"],
+  "Civil Servants": ["Administrative Assistant", "Public Policy Analyst", "Customs Officer", "Clerk", "Social Services Officer", "Government Program Coordinator"],
+  "Journalism": ["Media", "Journalist", "News Reporter", "Editor", "Copywriter", "Photojournalist", "TV Anchor", "Broadcast Journalist", "Investigative Reporter", "Columnist","Content Writer", "Media Producer", "Sub-Editor", "Press Officer"]
+};
+
+// Helper: tokenize and clean text
+function tokenize(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => SYNONYMS[word] || word);  // replace synonyms
+}
+
+// === TRAINING: Build vocabulary and count word frequencies ===
+const vocabulary = new Set();
+const wordCountsPerClass = {};
+const classDocCounts = {};
+const classes = Array.from(new Set(trainingLabels));
+const totalDocs = trainingLabels.length;
+
+// Initialize
+classes.forEach(cls => {
+  wordCountsPerClass[cls] = {};
+  classDocCounts[cls] = 0;
+});
+
+// Count words per class
+for (let i = 0; i < trainingSentences.length; i++) {
+  const cls = trainingLabels[i];
+  classDocCounts[cls]++;
+  const tokens = tokenize(trainingSentences[i]);
+  tokens.forEach(token => {
+    vocabulary.add(token);
+    wordCountsPerClass[cls][token] = (wordCountsPerClass[cls][token] || 0) + 1;
+  });
+}
+
+// Total words per class
+const totalWordsPerClass = {};
+classes.forEach(cls => {
+  totalWordsPerClass[cls] = Object.values(wordCountsPerClass[cls]).reduce((a,b) => a+b, 0);
+});
+
+// === Predict function ===
+function predict(text) {
+  const tokens = tokenize(text);
+  const vocabSize = vocabulary.size;
+  let classScores = {};
+
+  classes.forEach(cls => {
+    // Start with log prior probability
+    const prior = Math.log(classDocCounts[cls] / totalDocs);
+    let logProb = prior;
+
+    tokens.forEach(token => {
+      // Apply Laplace smoothing
+      const count = wordCountsPerClass[cls][token] || 0;
+      const wordProb = Math.log((count + 1) / (totalWordsPerClass[cls] + vocabSize));
+      logProb += wordProb;
+    });
+
+    classScores[cls] = logProb;
+  });
+
+  // Convert log probs to normalized probabilities
+  const maxLog = Math.max(...Object.values(classScores));
+  const expScores = {};
+  let sumExp = 0;
+  for (const cls in classScores) {
+    expScores[cls] = Math.exp(classScores[cls] - maxLog);
+    sumExp += expScores[cls];
+  }
+  for (const cls in expScores) {
+    expScores[cls] /= sumExp;
+  }
+
+  return expScores;
+}
+
+// === Extract fields from text ===
+function extractFields(text) {
+  const textLower = text.toLowerCase();
+  const detected = new Set();
+
+  Object.entries(FIELD_KEYWORDS).forEach(([field, keywords]) => {
+    for (const kw of keywords) {
+      if (textLower.includes(kw)) {
+        detected.add(field);
+        break;
+      }
+    }
+  });
+  return Array.from(detected);
+}
+
+// === Suggest jobs ===
+function suggestJobs(traitScores, userText) {
+  // Sort traits by probability
+  const sortedTraits = Object.entries(traitScores).sort((a,b) => b[1] - a[1]);
+  const topTraits = sortedTraits.slice(0, 2).map(t => t[0]);
+  const detectedFields = extractFields(userText);
+
+  // Gather jobs by traits
+  let traitJobs = [];
+  topTraits.forEach(trait => {
+    traitJobs = traitJobs.concat(CAREER_SUGGESTIONS[trait] || []);
+  });
+  traitJobs = [...new Set(traitJobs)];
+
+  // Gather jobs by fields
+  let jobScores = {};
+
+  detectedFields.forEach(field => {
+    (FIELD_JOBS[field] || []).forEach(job => {
+      jobScores[job] = (jobScores[job] || 0) + 3;  // field jobs weighted higher
+    });
+  });
+
+  traitJobs.forEach(job => {
+    jobScores[job] = (jobScores[job] || 0) + 1;  // trait jobs weighted lower
+  });
+
+  // Sort by score desc
+  const sortedJobs = Object.entries(jobScores).sort((a,b) => b[1] - a[1]);
+  return sortedJobs.slice(0, 20).map(e => e[0]);
+}
+
+// === Main analyze ===
+function analyze() {
+  const input = document.getElementById("inputText").value.trim();
+  if (!input) {
+    alert("Please enter some text about your interests.");
+    return;
+  }
+
+  const traits = predict(input);
+  const jobs = suggestJobs(traits, input);
+
+  // Format output
+  let output = "Trait Probabilities:\n";
+  for (const [trait, prob] of Object.entries(traits)) {
+    output += `  ${trait}: ${(prob*100).toFixed(2)}%\n`;
+  }
+  output += "\nDetected Fields:\n  ";
+  output += extractFields(input).join(", ") || "None";
+  output += "\n\nSuggested Careers:\n";
+  output += jobs.join("\n");
+
+  document.getElementById("output").textContent = output;
+}
+</script>
+
+</body>
+</html>
