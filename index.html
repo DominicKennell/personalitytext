@@ -177,12 +177,12 @@ const SYNONYMS = {
   "hairdresser": "hair & beauty",
   "developer": "software developer",
   "programmer": "software developer",
-  "legal": "law", // Added for law
-  "attorney": "lawyer", // Added for law
-  "barrister": "lawyer", // Added for law
-  "judge": "lawyer", // Added for law
-  "justice": "law", // Added for law
-  "court": "law", // Added for law
+  "legal": "law",
+  "attorney": "lawyer",
+  "barrister": "lawyer",
+  "judge": "lawyer",
+  "justice": "law",
+  "court": "law",
   // Add more as needed
 };
 
@@ -212,7 +212,8 @@ const FIELD_KEYWORDS = {
   "Hair & Beauty": ["hair", "salon", "beauty", "makeup", "hairstylist", "cosmetology", "esthetician", "barber"],
   "Police": ["police", "law enforcement", "officer", "cop", "detective", "investigator", "crime"],
   "Civil Servants": ["civil servant", "government", "public service", "bureaucrat", "administration", "clerk"],
-  "Law": ["law", "legal", "justice", "court", "attorney", "lawyer", "judiciary", "jurisprudence", "litigation", "paralegal", "barrister", "judge"] // Added Law field keywords
+  // Ensure "law" itself is a strong keyword. Other terms like "legal" are already handled by synonyms.
+  "Law": ["law", "legal", "justice", "court", "attorney", "lawyer", "judiciary", "jurisprudence", "litigation", "paralegal", "barrister", "judge"]
 };
 
 // Field jobs
@@ -229,7 +230,7 @@ const FIELD_JOBS = {
   "Police": ["Police Officer", "Detective", "Forensic Investigator", "Traffic Officer", "SWAT", "Community Policing Officer"],
   "Civil Servants": ["Administrative Assistant", "Public Policy Analyst", "Customs Officer", "Clerk", "Social Services Officer", "Government Program Coordinator"],
   "Journalism": ["Media", "Journalist", "News Reporter", "Editor", "Copywriter", "Photojournalist", "TV Anchor", "Broadcast Journalist", "Investigative Reporter", "Columnist","Content Writer", "Media Producer", "Sub-Editor", "Press Officer"],
-  "Law": ["Lawyer", "Judge", "Paralegal", "Legal Secretary", "Prosecutor", "Defense Attorney", "Corporate Counsel", "Legal Analyst", "Arbitrator", "Mediator", "Court Clerk", "Legal Aid Officer"] // Added Law field jobs
+  "Law": ["Lawyer", "Judge", "Paralegal", "Legal Secretary", "Prosecutor", "Defense Attorney", "Corporate Counsel", "Legal Analyst", "Arbitrator", "Mediator", "Court Clerk", "Legal Aid Officer"]
 };
 
 // Helper: tokenize and clean text
@@ -314,8 +315,11 @@ function extractFields(text) {
   const detected = new Set();
 
   Object.entries(FIELD_KEYWORDS).forEach(([field, keywords]) => {
+    // Tokenize the input text for keyword matching to ensure synonyms are applied
+    const inputTokens = tokenize(textLower);
     for (const kw of keywords) {
-      if (textLower.includes(kw)) {
+      // Check if the tokenized input contains the keyword (which might be a synonym's target)
+      if (inputTokens.includes(kw)) {
         detected.add(field);
         break;
       }
@@ -326,34 +330,29 @@ function extractFields(text) {
 
 // === Suggest jobs ===
 function suggestJobs(traitScores, userText) {
-  // Sort traits by probability
   const sortedTraits = Object.entries(traitScores).sort((a,b) => b[1] - a[1]);
-  const topTraits = sortedTraits.slice(0, 2).map(t => t[0]); // Consider top 2 traits
+  const topTraits = sortedTraits.slice(0, 2).map(t => t[0]);
   const detectedFields = extractFields(userText);
 
-  // Gather jobs by traits
-  let traitJobs = [];
-  topTraits.forEach(trait => {
-    traitJobs = traitJobs.concat(CAREER_SUGGESTIONS[trait] || []);
-  });
-  traitJobs = [...new Set(traitJobs)]; // Remove duplicates
-
-  // Gather jobs by fields
   let jobScores = {};
 
-  // Assign higher scores to jobs from detected fields
+  // Strategy 1: Boost jobs based on direct field detection (higher priority)
   detectedFields.forEach(field => {
     (FIELD_JOBS[field] || []).forEach(job => {
-      jobScores[job] = (jobScores[job] || 0) + 3; // Field jobs weighted higher
+      // Give a significant boost if a field is directly mentioned/detected
+      jobScores[job] = (jobScores[job] || 0) + 10; // Increased weight for direct field matches
     });
   });
 
-  // Assign lower scores to jobs from traits (if not already added by field)
-  traitJobs.forEach(job => {
-    jobScores[job] = (jobScores[job] || 0) + 1; // Trait jobs weighted lower
+  // Strategy 2: Add jobs based on inferred traits (secondary priority)
+  topTraits.forEach(trait => {
+    (CAREER_SUGGESTIONS[trait] || []).forEach(job => {
+      // Add or somewhat boost jobs from traits, but less than direct field matches
+      jobScores[job] = (jobScores[job] || 0) + 1;
+    });
   });
 
-  // Sort by score desc and get top N
+  // Sort by score desc
   const sortedJobs = Object.entries(jobScores).sort((a,b) => b[1] - a[1]);
   return sortedJobs.slice(0, 20).map(e => e[0]);
 }
