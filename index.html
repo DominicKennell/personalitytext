@@ -140,7 +140,20 @@ const trainingSentences = [
   "I get irritated or upset more than others.",
   "I feel vulnerable and emotionally fragile at times.",
   "I find it hard to handle pressure without stress.",
-  "I sometimes withdraw when I feel distressed."
+  "I sometimes withdraw when I feel distressed.",
+
+  // Analytical (new, 8 sentences)
+  "I enjoy solving complex problems and puzzles.",
+  "I like to analyze information and find logical solutions.",
+  "I pay close attention to details and discrepancies.",
+  "I am good at critical thinking and evaluating arguments.",
+  "I like to research and understand intricate systems.",
+  "I enjoy debates and presenting well-reasoned arguments.",
+  "I am methodical in my approach to challenges.",
+  "I am drawn to professions that require deep analysis and strategic thinking.",
+  "I want to be a lawyer.",
+  "I want to work in law.",
+  "I am interested in legal work."
 ];
 
 const trainingLabels = [
@@ -148,7 +161,8 @@ const trainingLabels = [
   ...Array(10).fill("Conscientiousness"),
   ...Array(10).fill("Extraversion"),
   ...Array(10).fill("Agreeableness"),
-  ...Array(10).fill("Neuroticism")
+  ...Array(10).fill("Neuroticism"),
+  ...Array(11).fill("Analytical") // Added Analytical trait
 ];
 
 // Synonyms map (simple)
@@ -163,6 +177,12 @@ const SYNONYMS = {
   "hairdresser": "hair & beauty",
   "developer": "software developer",
   "programmer": "software developer",
+  "legal": "law", // Added for law
+  "attorney": "lawyer", // Added for law
+  "barrister": "lawyer", // Added for law
+  "judge": "lawyer", // Added for law
+  "justice": "law", // Added for law
+  "court": "law", // Added for law
   // Add more as needed
 };
 
@@ -172,7 +192,8 @@ const CAREER_SUGGESTIONS = {
   Conscientiousness: ["Accountant", "Engineer", "Project Manager", "Surgeon", "Data Analyst", "Auditor", "Pharmacist", "Quality Control Inspector", "IT Manager", "Civil Engineer", "Financial Analyst", "Tax Consultant", "Risk Manager", "Financial Planner", "Production Manager", "Industrial Engineer", "Logistics Coordinator", "Healthcare Administrator", "Medical Assistant"],
   Extraversion: ["Salesperson", "Teacher", "Public Relations Manager", "Flight Attendant", "Event Planner", "Marketing Executive", "Customer Service Rep", "Radio DJ", "Sports Coach", "Recruiter", "Restaurant Manager", "Hotel Manager", "Bartender", "Concierge", "School Counselor", "Kindergarten Teacher", "TV Presenter", "Radio Host", "Talent Agent"],
   Agreeableness: ["Nurse", "Social Worker", "Counselor", "Therapist", "Human Resources Specialist", "Volunteer Coordinator", "Kindergarten Teacher", "Veterinarian", "School Counselor", "Life Coach", "Physical Therapist", "Speech-Language Pathologist", "Dietitian", "Special Education Teacher", "Education Coordinator", "Community Service Manager", "Nonprofit Program Manager"],
-  Neuroticism: ["Artist", "Researcher", "Poet", "Academic Researcher", "Librarian", "Translator", "Data Entry Clerk", "Medical Coder", "Lab Technician", "Archivist", "Technical Writer", "Library Technician", "Medical Laboratory Scientist", "Clinical Research Coordinator"]
+  Neuroticism: ["Artist", "Researcher", "Poet", "Academic Researcher", "Librarian", "Translator", "Data Entry Clerk", "Medical Coder", "Lab Technician", "Archivist", "Technical Writer", "Library Technician", "Medical Laboratory Scientist", "Clinical Research Coordinator"],
+  Analytical: ["Lawyer", "Judge", "Paralegal", "Legal Consultant", "Data Scientist", "Research Scientist", "Financial Analyst", "Actuary", "Statistician", "Mathematician", "Economist", "Auditor", "Forensic Accountant", "Policy Analyst", "Urban Planner", "Logistics Analyst", "Management Consultant", "Software Engineer", "Systems Analyst"] // Added Analytical careers
 };
 
 // Field keywords for detection
@@ -190,7 +211,8 @@ const FIELD_KEYWORDS = {
   "Journalism": ["journalist", "reporter", "news", "media", "broadcast", "editorial", "press", "correspondent", "writing", "writer", "article", "report", "journalism"],
   "Hair & Beauty": ["hair", "salon", "beauty", "makeup", "hairstylist", "cosmetology", "esthetician", "barber"],
   "Police": ["police", "law enforcement", "officer", "cop", "detective", "investigator", "crime"],
-  "Civil Servants": ["civil servant", "government", "public service", "bureaucrat", "administration", "clerk"]
+  "Civil Servants": ["civil servant", "government", "public service", "bureaucrat", "administration", "clerk"],
+  "Law": ["law", "legal", "justice", "court", "attorney", "lawyer", "judiciary", "jurisprudence", "litigation", "paralegal", "barrister", "judge"] // Added Law field keywords
 };
 
 // Field jobs
@@ -206,7 +228,8 @@ const FIELD_JOBS = {
   "Hair & Beauty": ["Hairdresser", "Makeup Artist", "Beautician", "Barber", "Skincare Specialist", "Salon Manager"],
   "Police": ["Police Officer", "Detective", "Forensic Investigator", "Traffic Officer", "SWAT", "Community Policing Officer"],
   "Civil Servants": ["Administrative Assistant", "Public Policy Analyst", "Customs Officer", "Clerk", "Social Services Officer", "Government Program Coordinator"],
-  "Journalism": ["Media", "Journalist", "News Reporter", "Editor", "Copywriter", "Photojournalist", "TV Anchor", "Broadcast Journalist", "Investigative Reporter", "Columnist","Content Writer", "Media Producer", "Sub-Editor", "Press Officer"]
+  "Journalism": ["Media", "Journalist", "News Reporter", "Editor", "Copywriter", "Photojournalist", "TV Anchor", "Broadcast Journalist", "Investigative Reporter", "Columnist","Content Writer", "Media Producer", "Sub-Editor", "Press Officer"],
+  "Law": ["Lawyer", "Judge", "Paralegal", "Legal Secretary", "Prosecutor", "Defense Attorney", "Corporate Counsel", "Legal Analyst", "Arbitrator", "Mediator", "Court Clerk", "Legal Aid Officer"] // Added Law field jobs
 };
 
 // Helper: tokenize and clean text
@@ -305,7 +328,7 @@ function extractFields(text) {
 function suggestJobs(traitScores, userText) {
   // Sort traits by probability
   const sortedTraits = Object.entries(traitScores).sort((a,b) => b[1] - a[1]);
-  const topTraits = sortedTraits.slice(0, 2).map(t => t[0]);
+  const topTraits = sortedTraits.slice(0, 2).map(t => t[0]); // Consider top 2 traits
   const detectedFields = extractFields(userText);
 
   // Gather jobs by traits
@@ -313,22 +336,24 @@ function suggestJobs(traitScores, userText) {
   topTraits.forEach(trait => {
     traitJobs = traitJobs.concat(CAREER_SUGGESTIONS[trait] || []);
   });
-  traitJobs = [...new Set(traitJobs)];
+  traitJobs = [...new Set(traitJobs)]; // Remove duplicates
 
   // Gather jobs by fields
   let jobScores = {};
 
+  // Assign higher scores to jobs from detected fields
   detectedFields.forEach(field => {
     (FIELD_JOBS[field] || []).forEach(job => {
-      jobScores[job] = (jobScores[job] || 0) + 3;  // field jobs weighted higher
+      jobScores[job] = (jobScores[job] || 0) + 3; // Field jobs weighted higher
     });
   });
 
+  // Assign lower scores to jobs from traits (if not already added by field)
   traitJobs.forEach(job => {
-    jobScores[job] = (jobScores[job] || 0) + 1;  // trait jobs weighted lower
+    jobScores[job] = (jobScores[job] || 0) + 1; // Trait jobs weighted lower
   });
 
-  // Sort by score desc
+  // Sort by score desc and get top N
   const sortedJobs = Object.entries(jobScores).sort((a,b) => b[1] - a[1]);
   return sortedJobs.slice(0, 20).map(e => e[0]);
 }
