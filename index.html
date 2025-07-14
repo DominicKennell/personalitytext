@@ -1,24 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Career Guidance</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 2em; }
-  textarea { width: 100%; height: 100px; font-size: 1em; }
-  #output { white-space: pre-wrap; margin-top: 1em; background: #f0f0f0; padding: 1em; }
-  button { font-size: 1.2em; margin-top: 1em; padding: 0.5em 1em; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Career Guidance Tool</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      padding: 2rem;
+      color: #333;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      max-width: 700px;
+      margin: auto;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    textarea {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      resize: vertical;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #output {
+      margin-top: 2rem;
+      white-space: pre-wrap;
+      background: #f1f3f5;
+      padding: 1.25rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #222;
+    }
+    @media (max-width: 600px) {
+      .card {
+        padding: 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
 
-<h2>Describe your personality, interests, or dream job:</h2>
-<textarea id="inputText"></textarea>
-<br />
-<button onclick="analyze()">Analyze and Suggest Careers</button>
-
-<div id="output"></div>
+<div class="card">
+  <h2>Describe Your Interests or Dream Job</h2>
+  <textarea id="inputText" placeholder="e.g. I enjoy helping people, I'm interested in technology and creating things..."></textarea>
+  <button onclick="analyze()">Analyze and Suggest Careers</button>
+  <div id="output"></div>
+</div>
 
 <script>
 // === Data ===
