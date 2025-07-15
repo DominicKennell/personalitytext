@@ -79,7 +79,7 @@
 <script>
 // === Data ===
 const trainingSentences = [
-  // Openness (13)
+  // Openness (10)
   "I love exploring new ideas and artistic creativity.",
   "Reading books about philosophy and abstract concepts excites me.",
   "I enjoy imagining innovative solutions to problems.",
@@ -88,11 +88,8 @@ const trainingSentences = [
   "I like trying experimental art and design.",
   "I am curious and open to novel experiences.",
   "I enjoy music, poetry, and literature.",
-  "My mind is always full of creative thoughts.",
   "I appreciate aesthetics and unique perspectives.",
   "I want to be a film editor",
-  "I want to be a movie editor",
-  "I want to be a vlogger",
 
   // Conscientiousness (10)
   "I am very organized and always make detailed plans.",
@@ -142,7 +139,7 @@ const trainingSentences = [
   "I find it hard to handle pressure without stress.",
   "I sometimes withdraw when I feel distressed.",
 
-  // Analytical (new, 8 sentences)
+  // Analytical (new, 10 sentences)
   "I enjoy solving complex problems and puzzles.",
   "I like to analyze information and find logical solutions.",
   "I pay close attention to details and discrepancies.",
@@ -153,16 +150,15 @@ const trainingSentences = [
   "I am drawn to professions that require deep analysis and strategic thinking.",
   "I want to be a lawyer.",
   "I want to work in law.",
-  "I am interested in legal work."
 ];
 
 const trainingLabels = [
-  ...Array(13).fill("Openness"),
+  ...Array(10).fill("Openness"),
   ...Array(10).fill("Conscientiousness"),
   ...Array(10).fill("Extraversion"),
   ...Array(10).fill("Agreeableness"),
   ...Array(10).fill("Neuroticism"),
-  ...Array(11).fill("Analytical") // Added Analytical trait
+  ...Array(10).fill("Analytical") // Added Analytical trait
 ];
 
 // Synonyms map (simple)
